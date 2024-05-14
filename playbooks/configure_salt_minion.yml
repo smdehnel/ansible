@@ -1,0 +1,48 @@
+---
+- name: Configure Salt Minion on RHEL 9
+  hosts: my_servers
+  become: true
+  vars:
+    salt_master_ip: "192.168.254.70"
+
+  tasks:
+    - name: Install SaltStack Repository
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - https://repo.saltproject.io/py3/redhat/salt-py3-repo-latest.el9.noarch.rpm
+        - salt-minion
+        - salt
+        - salt-ssh
+      tags:
+        - install
+
+    # Add a pause task here to wait for the repository installation to complete
+    - name: Pause for Repository Installation
+      pause:
+        seconds: 90  # Adjust the duration as needed
+
+    - name: Start and Enable Salt Minion Service
+      service:
+        name: salt-minion
+        state: started
+        enabled: true
+      tags:
+        - configure
+
+    - name: Set Salt Master Configuration
+      lineinfile:
+        path: /etc/salt/minion
+        line: "master: {{ salt_master_ip }}"
+        state: present
+      notify: restart salt minion
+      tags:
+        - configure
+
+  handlers:
+    - name: restart salt minion
+      service:
+        name: salt-minion
+        state: restarted
+

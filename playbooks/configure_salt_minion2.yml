@@ -1,0 +1,44 @@
+---
+- name: Configure Salt Minion on RHEL 9
+  hosts: my_servers
+  become: true
+  vars:
+    salt_master_ip: "192.168.254.70"
+
+  tasks:
+    - name: Import SaltStack GPG key
+      shell: rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/SALT-PROJECT-GPG-PUBKEY-2023.pub
+      ignore_errors: yes
+
+    - name: Add SaltStack repository
+      shell: curl -fsSL https://repo.saltproject.io/salt/py3/redhat/9/x86_64/latest.repo | sudo tee /etc/yum.repos.d/salt.repo
+      ignore_errors: yes
+
+    - name: Install SaltStack packages
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - salt-minion
+        - salt
+        - salt-ssh
+
+    - name: Start and Enable Salt Minion Service
+      service:
+        name: salt-minion
+        state: started
+        enabled: true
+
+    - name: Set Salt Master Configuration
+      lineinfile:
+        path: /etc/salt/minion
+        line: "master: {{ salt_master_ip }}"
+        state: present
+      notify: restart salt minion
+
+  handlers:
+    - name: restart salt minion
+      service:
+        name: salt-minion
+        state: restarted
+
