@@ -1,0 +1,17 @@
+---
+- name: Keep all shell history for all users
+  hosts: my_servers
+  become: yes
+  tasks:
+    - name: Update /etc/profile.d/bash_history.sh
+      copy:
+        src: bash_history.sh
+        dest: /etc/profile.d/bash_history.sh
+        mode: "0644"
+
+    - name: Update /etc/profile
+      lineinfile:
+        path: /etc/profile
+        line: "source /etc/profile.d/bash_history.sh"
+        insertafter: EOF
+

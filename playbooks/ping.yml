@@ -1,0 +1,11 @@
+- name: Ansible ping
+  hosts: all
+  gather_facts: False
+
+  tasks:
+
+    - ansible.builtin.ping:
+
+#    ### Some Ansible modules won't work unless this library exists
+#    - yum:
+#        list: libselinux-python

@@ -1,0 +1,5 @@
+# group_vars/rhel9_servers.yml
+---
+ansible_user: sean
+ansible_ssh_private_key_file: /home/sean/.ssh/id_ed25519 
+

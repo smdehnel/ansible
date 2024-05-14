@@ -1,0 +1,62 @@
+---
+- name: Reboot server
+  hosts: all
+  gather_facts: False
+  become: True
+
+  # NOTE: These variables only added for reference.  Do not uncomment and leave them empty or the playbook will fail.
+  #       The "default(omit)" filter used within the task will not work unless the variable is completely undefined.
+  vars:
+    # connect_timeout:
+    #   Maximum seconds to wait for a successful connection to the managed hosts before trying again.
+    #   If unspecified, the default setting for the underlying connection plugin is used.
+    #   [Default: (null)]
+    #   type: int
+
+    # msg:
+    #   Message to display to users before reboot.
+    #   [Default: Reboot initiated by Ansible]
+    #   type: str
+
+    # post_reboot_delay:
+    #   Seconds to wait after the reboot command was successful before attempting to validate the system rebooted successfully.
+    #   This is useful if you want wait for something to settle despite your connection already working.
+    #   [Default: 0]
+    #   type: int
+
+    # pre_reboot_delay:
+    #   Seconds to wait before reboot. Passed as a parameter to the reboot command.
+    #   On Linux, macOS and OpenBSD, this is converted to minutes and rounded down. If less than 60, it will be set to 0.
+    #   On Solaris and FreeBSD, this will be seconds.
+    #   [Default: 0]
+    #   type: int
+
+    # reboot_timeout:
+    #   Maximum seconds to wait for machine to reboot and respond to a test command.
+    #   This timeout is evaluated separately for both reboot verification and test command success so the maximum execution time for the module is twice this amount.
+    #   [Default: 600]
+    #   type: int
+
+    # search_paths:
+    #   Paths to search on the remote machine for the `shutdown' command.
+    #   `Only' these paths will be searched for the `shutdown' command. `PATH' is ignored in the remote node when searching for the `shutdown' command.
+    #   [Default: [u'/sbin', u'/usr/sbin', u'/usr/local/sbin']]
+    #   type: list
+    #   version_added: 2.8
+
+    # test_command:
+    #   Command to run on the rebooted host and expect success from to determine the machine is ready for further tasks.
+    #   [Default: whoami]
+    #   type: str
+
+
+  tasks:
+    - name: Reboot server
+      reboot:
+        msg: '{{ msg | default(omit) }}'
+        connect_timeout: '{{ connect_timeout | default(omit) }}'
+        post_reboot_delay: '{{ post_reboot_delay | default(omit) }}'
+        pre_reboot_delay: '{{ pre_reboot_delay | default(omit) }}'
+        reboot_timeout: '{{ reboot_timeout | default(omit) }}'
+        search_paths: '{{ search_paths | default(omit) }}'
+        test_command: '{{ test_command | default(omit) }}'
