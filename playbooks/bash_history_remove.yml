@@ -1,0 +1,10 @@
+---
+- name: Remove bash_history.sh file from servers
+  hosts: my_servers
+  become: yes
+  tasks:
+    - name: Remove /etc/profile.d/bash_history.sh file
+      file:
+        path: /etc/profile.d/bash_history.sh
+        state: absent
+
