@@ -1,0 +1,128 @@
+---
+- name: Compile and Install StrongSwan from Source
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install build dependencies
+      ansible.builtin.yum:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - gcc
+        - gmp-devel
+        - openssl-devel
+        - readline-devel
+        - pam-devel
+        - bison
+        - flex
+        - make
+        - wget
+
+    - name: Download StrongSwan source tarball
+      ansible.builtin.get_url:
+        url: https://download.strongswan.org/strongswan-5.9.3.tar.bz2
+        dest: /tmp/strongswan-5.9.3.tar.bz2
+
+    - name: Extract StrongSwan source tarball
+      ansible.builtin.unarchive:
+        src: /tmp/strongswan-5.9.3.tar.bz2
+        dest: /tmp
+        remote_src: yes
+
+    - name: Configure StrongSwan without systemd
+      ansible.builtin.command:
+        cmd: ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --disable-systemd
+        chdir: /tmp/strongswan-5.9.3
+
+    - name: Compile StrongSwan
+      ansible.builtin.command:
+        cmd: make
+        chdir: /tmp/strongswan-5.9.3
+
+    - name: Install StrongSwan
+      ansible.builtin.command:
+        cmd: make install
+        chdir: /tmp/strongswan-5.9.3
+
+    - name: Ensure StrongSwan is enabled and started
+      ansible.builtin.service:
+        name: strongswan
+        enabled: yes
+        state: started
+
+    - name: Enable IP forwarding
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        state: present
+        reload: yes
+
+    - name: Add VPN gateways to /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        create: yes
+        line: "{{ item }}"
+      loop:
+        - "192.168.254.7 vpn-gateway1.lab vpn-gateway1"
+        - "192.168.254.8 vpn-gateway2.lab vpn-gateway2"
+
+    - name: Restart StrongSwan service
+      ansible.builtin.service:
+        name: strongswan
+        state: restarted
+
+    - name: Verify StrongSwan service status
+      ansible.builtin.command: systemctl status strongswan
+      register: strongswan_status
+
+    - name: Check IPsec status
+      ansible.builtin.command: ipsec statusall
+      register: ipsec_status
+
+    - name: Test connectivity to VPN gateway 1
+      ansible.builtin.command: ping -c 4 vpn-gateway1.lab
+      register: ping_gateway1
+
+    - name: Test connectivity to VPN gateway 2
+      ansible.builtin.command: ping -c 4 vpn-gateway2.lab
+      register: ping_gateway2
+
+    - name: Check IP forwarding setting
+      ansible.builtin.command: sysctl net.ipv4.ip_forward
+      register: ip_forward_status
+
+    - name: Check routing table
+      ansible.builtin.command: ip route
+      register: routing_table
+
+    - name: Test external connectivity
+      ansible.builtin.command: curl -I https://www.google.com
+      register: external_connectivity
+
+    - name: Print StrongSwan service status
+      ansible.builtin.debug:
+        msg: "{{ strongswan_status.stdout }}"
+
+    - name: Print IPsec status
+      ansible.builtin.debug:
+        msg: "{{ ipsec_status.stdout }}"
+
+    - name: Print ping results to VPN gateway 1
+      ansible.builtin.debug:
+        msg: "{{ ping_gateway1.stdout }}"
+
+    - name: Print ping results to VPN gateway 2
+      ansible.builtin.debug:
+        msg: "{{ ping_gateway2.stdout }}"
+
+    - name: Print IP forwarding status
+      ansible.builtin.debug:
+        msg: "{{ ip_forward_status.stdout }}"
+
+    - name: Print routing table
+      ansible.builtin.debug:
+        msg: "{{ routing_table.stdout }}"
+
+    - name: Print external connectivity results
+      ansible.builtin.debug:
+        msg: "{{ external_connectivity.stdout }}"

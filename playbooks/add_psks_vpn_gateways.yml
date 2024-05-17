@@ -1,0 +1,19 @@
+---
+- name: Add a single PSK to ipsec.secrets on a VPN gateway
+  hosts: vpn_servers
+  become: yes
+  vars:
+    client_ip: "{{ client_ip }}"
+    psk: "{{ psk }}"
+  tasks:
+    - name: Add PSK for a specific client
+      ansible.builtin.lineinfile:
+        path: /etc/strongswan/ipsec.secrets
+        create: yes
+        line: "{{ client_ip }} : PSK '{{ psk }}'"
+        state: present
+
+    - name: Restart StrongSwan service
+      ansible.builtin.service:
+        name: strongswan
+        state: restarted

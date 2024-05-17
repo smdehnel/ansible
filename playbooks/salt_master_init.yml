@@ -1,0 +1,69 @@
+---
+- name: Initial Salt Updates
+  hosts: all
+  become: yes
+  vars:
+    salt_master_ip: 192.168.254.70  # Salt master's IP address
+
+  tasks:
+    - name: Add new server hostname and IP to hosts.tmpl
+      delegate_to: "{{ salt_master_ip }}"
+      lineinfile:
+        path: /git/salt/srv/salt/files/hosts.tmpl
+        line: "{{ ansible_default_ipv4.address }} {{ ansible_hostname }}"
+        state: present
+      run_once: true
+
+    - name: Accept Salt keys from new servers
+      delegate_to: "{{ salt_master_ip }}"
+      shell: |
+        for minion in $(salt-key --list=unaccepted | grep -E '^[^-]'); do
+          salt-key --accept=$minion -y;
+        done
+      run_once: true
+
+    - name: Create master.conf with master IP
+      copy:
+        dest: /etc/salt/minion.d/master.conf
+        content: |
+          master: 192.168.254.70
+
+    - name: Refresh Salt pillar data
+      delegate_to: "{{ salt_master_ip }}"
+      command: salt '*' saltutil.refresh_pillar
+      run_once: true
+
+    - name: Apply hosts state to Pi-hole servers
+      delegate_to: "{{ salt_master_ip }}"
+      command: salt -G 'roles:pihole_servers' state.apply states/hosts
+      run_once: true
+
+    - name: Copy updated hosts.tmpl to /srv/salt/files/hosts.tmpl
+      delegate_to: "{{ salt_master_ip }}"
+      command: cp /git/salt/srv/salt/files/hosts.tmpl /srv/salt/files/hosts.tmpl
+      run_once: true
+
+    - name: Apply dnf_refresh_cache state to Rocky systems
+      delegate_to: "{{ salt_master_ip }}"
+      command: salt -G 'os:Rocky' state.apply states/dnf_refresh_cache
+      run_once: true
+
+    - name: Apply dnf_update state to Rocky systems
+      delegate_to: "{{ salt_master_ip }}"
+      command: salt -G 'os:Rocky' state.apply states/dnf_update
+      run_once: true
+
+    - name: Apply apt_refresh_cache state to Ubuntu systems
+      delegate_to: "{{ salt_master_ip }}"
+      command: salt -G 'os:Ubuntu' state.apply states/apt_refresh_cache
+      run_once: true
+
+    - name: Apply apt_update state to Ubuntu systems
+      delegate_to: "{{ salt_master_ip }}"
+      command: salt -G 'os:Ubuntu' state.apply states/apt_update
+      run_once: true
+
+    - name: Reboot servers
+      reboot:
+        msg: "Reboot initiated by Ansible after initialization tasks."
+        reboot_timeout: 600

@@ -1,0 +1,48 @@
+---
+- name: Compile and install StrongSwan from source
+  hosts: vpn_servers
+  become: yes
+  tasks:
+    - name: Install build dependencies
+      dnf:
+        name:
+          - gcc
+          - make
+          - gmp-devel
+          - libcurl-devel
+          - pam-devel
+          - openssl-devel
+          - systemd-devel
+        state: present
+
+    - name: Download StrongSwan source tarball
+      get_url:
+        url: https://download.strongswan.org/strongswan-5.9.4.tar.bz2
+        dest: /tmp/strongswan-5.9.4.tar.bz2
+
+    - name: Extract StrongSwan source tarball
+      unarchive:
+        src: /tmp/strongswan-5.9.4.tar.bz2
+        dest: /tmp
+        remote_src: yes
+
+    - name: Configure StrongSwan
+      command: ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --enable-systemd
+      args:
+        chdir: /tmp/strongswan-5.9.4
+
+    - name: Compile StrongSwan
+      command: make
+      args:
+        chdir: /tmp/strongswan-5.9.4
+
+    - name: Install StrongSwan
+      command: make install
+      args:
+        chdir: /tmp/strongswan-5.9.4
+
+    - name: Ensure StrongSwan is enabled and started
+      systemd:
+        name: strongswan
+        enabled: yes
+        state: started

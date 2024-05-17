@@ -1,0 +1,75 @@
+---
+- name: Configure VPN Client
+  hosts: all
+  become: yes
+  tasks:
+    - name: Enable CodeReady Builder repository
+      ansible.builtin.command:
+        cmd: dnf config-manager --set-enabled crb
+      register: crb_enable
+      changed_when: "'enabled' in crb_enable.stdout"
+      ignore_errors: yes
+
+    - name: Enable PowerTools repository
+      ansible.builtin.command:
+        cmd: dnf config-manager --set-enabled powertools
+      register: powertools_enable
+      changed_when: "'enabled' in powertools_enable.stdout"
+      ignore_errors: yes
+
+    - name: Enable EPEL repository
+      ansible.builtin.command:
+        cmd: dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+      register: epel_install
+      changed_when: "'Complete!' in epel_install.stdout"
+
+    - name: Install StrongSwan
+      ansible.builtin.yum:
+        name: strongswan
+        state: present
+
+    - name: Configure IPsec settings
+      ansible.builtin.copy:
+        dest: /etc/strongswan/ipsec.conf
+        content: |
+          config setup
+            charondebug="ike 2, knl 2, cfg 2"
+
+          conn %default
+            keyexchange=ikev2
+            ike=aes256-sha1-modp1024!
+            esp=aes256-sha1!
+
+          conn myvpn
+            auto=start
+            left=%defaultroute
+            leftid=@client.example.local
+            leftauth=eap-mschapv2
+            right=haproxy1.lab
+            rightid=@vpn-gateway
+            rightauth=pubkey
+            rightsubnet=0.0.0.0/0
+            eap_identity=%identity
+
+    - name: Configure IPsec secrets
+      ansible.builtin.copy:
+        dest: /etc/strongswan/ipsec.secrets
+        content: |
+          : RSA client-key.pem
+          : PSK "HGPlGDW6s5HtAGfDso36HStlJNCRmXbfSlrKlq4d5uuBeUFTA3Zm2BL1QG65RSBV"
+          user : EAP "password"
+
+    - name: Enable and start StrongSwan
+      ansible.builtin.systemd:
+        name: strongswan
+        enabled: yes
+        state: started
+
+    - name: Enable IP forwarding using shell
+      ansible.builtin.shell: sysctl -w net.ipv4.ip_forward=1
+
+    - name: Ensure IP forwarding is persistent
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^net.ipv4.ip_forward'
+        line: 'net.ipv4.ip_forward = 1'

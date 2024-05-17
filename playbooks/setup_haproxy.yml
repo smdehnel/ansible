@@ -1,0 +1,46 @@
+---
+- name: Setup HAProxy Load Balancer with Docker
+  hosts: haproxy
+  become: yes
+
+  tasks:
+    - name: Ensure Docker is enabled and started
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+
+    - name: Pull HAProxy Docker image
+      community.general.docker_image:
+        name: haproxy
+        tag: latest
+        source: pull
+
+    - name: Create HAProxy configuration directory
+      file:
+        path: /etc/haproxy
+        state: directory
+        mode: '0755'
+
+    - name: Deploy HAProxy configuration
+      template:
+        src: templates/haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        mode: '0644'
+
+    - name: Run HAProxy container
+      community.general.docker_container:
+        name: haproxy
+        image: haproxy:latest
+        state: started
+        ports:
+          - "80:80"
+        volumes:
+          - /etc/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+        restart_policy: always
+
+  handlers:
+    - name: Restart HAProxy Container
+      community.general.docker_container:
+        name: haproxy
+        state: restarted

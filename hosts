@@ -5,9 +5,15 @@ ansible2
 pihole1
 pihole2
 autolab1
+vpn-gateway1
+vpn-gateway2
+haproxy1
 
 [rocky9_servers]
 autolab1
+vpn-gateway1
+vpn-gateway2
+haproxy1
 
 [rhel9_servers]
 control1
@@ -17,3 +23,10 @@ ansible2
 [ubuntu_servers]
 pihole1
 pihole2
+
+[vpn_servers]
+vpn-gateway1
+vpn-gateway2
+
+[haproxy_servers]
+haproxy1

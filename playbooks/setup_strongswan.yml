@@ -1,0 +1,139 @@
+---
+- name: Setup StrongSwan on VPN gateways
+  hosts: vpn_servers
+  become: yes
+  tasks:
+    - name: Install build dependencies
+      dnf:
+        name:
+          - gcc
+          - make
+          - gmp-devel
+          - libcurl-devel
+          - pam-devel
+          - openssl-devel
+          - systemd-devel
+        state: present
+
+    - name: Download StrongSwan source tarball
+      get_url:
+        url: https://download.strongswan.org/strongswan-5.9.4.tar.bz2
+        dest: /tmp/strongswan-5.9.4.tar.bz2
+
+    - name: Extract StrongSwan source tarball
+      unarchive:
+        src: /tmp/strongswan-5.9.4.tar.bz2
+        dest: /tmp
+        remote_src: yes
+
+    - name: Configure StrongSwan
+      command: ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --enable-systemd
+      args:
+        chdir: /tmp/strongswan-5.9.4
+
+    - name: Compile StrongSwan
+      command: make
+      args:
+        chdir: /tmp/strongswan-5.9.4
+
+    - name: Install StrongSwan
+      command: make install
+      args:
+        chdir: /tmp/strongswan-5.9.4
+
+    - name: Ensure StrongSwan is enabled and started
+      systemd:
+        name: strongswan
+        enabled: yes
+        state: started
+
+    - name: Generate CA key (run once)
+      shell: ipsec pki --gen --outform pem > /etc/strongswan/ipsec.d/private/ca-key.pem
+      args:
+        creates: /etc/strongswan/ipsec.d/private/ca-key.pem
+      run_once: true
+
+    - name: Generate CA certificate (run once)
+      shell: ipsec pki --self --ca --lifetime 3650 --in /etc/strongswan/ipsec.d/private/ca-key.pem --type rsa --dn "CN=VPN CA" --outform pem > /etc/strongswan/ipsec.d/cacerts/ca-cert.pem
+      args:
+        creates: /etc/strongswan/ipsec.d/cacerts/ca-cert.pem
+      run_once: true
+
+    - name: Set VPN gateway variables for vpn-gateway1
+      set_fact:
+        fqdn: vpn-gateway1.lab.com
+        cert: vpn-gateway1-cert.pem
+      when: inventory_hostname == "vpn-gateway1"
+
+    - name: Set VPN gateway variables for vpn-gateway2
+      set_fact:
+        fqdn: vpn-gateway2.lab.com
+        cert: vpn-gateway2-cert.pem
+      when: inventory_hostname == "vpn-gateway2"
+
+    - name: Generate VPN gateway private key
+      shell: ipsec pki --gen --outform pem > /etc/strongswan/ipsec.d/private/{{ inventory_hostname }}-key.pem
+      args:
+        creates: /etc/strongswan/ipsec.d/private/{{ inventory_hostname }}-key.pem
+
+    - name: Generate VPN gateway certificate
+      shell: ipsec pki --pub --in /etc/strongswan/ipsec.d/private/{{ inventory_hostname }}-key.pem | ipsec pki --issue --lifetime 1825 --cacert /etc/strongswan/ipsec.d/cacerts/ca-cert.pem --cakey /etc/strongswan/ipsec.d/private/ca-key.pem --dn "CN={{ fqdn }}" --san {{ fqdn }} --flag serverAuth --flag ikeIntermediate --outform pem > /etc/strongswan/ipsec.d/certs/{{ cert }}
+      args:
+        creates: /etc/strongswan/ipsec.d/certs/{{ cert }}
+
+    - name: Configure IPsec settings
+      copy:
+        dest: /etc/strongswan/ipsec.conf
+        content: |
+          config setup
+              charondebug="ike 2, knl 2, cfg 2"
+              uniqueids=no
+
+          conn %default
+              keyexchange=ikev2
+              ike=aes256-sha1-modp1024!
+              esp=aes256-sha1!
+              dpdaction=clear
+              dpddelay=300s
+              rekey=no
+              left=%any
+              leftauth=pubkey
+              leftcert={{ cert }}
+              leftid=@{{ fqdn }}
+              leftsendcert=always
+              right=%any
+              rightauth=eap-mschapv2
+              rightsourceip=10.10.10.0/24
+              rightdns=192.168.254.15,192.168.254.16
+
+          conn IPSec-IKEv2
+              keyexchange=ikev2
+              auto=add
+
+    - name: Configure IPsec secrets
+      copy:
+        dest: /etc/strongswan/ipsec.secrets
+        content: |
+          : RSA "{{ inventory_hostname }}-key.pem"
+          username : EAP "password"
+      vars:
+        username: your_username_here
+        password: your_password_here
+
+    - name: Allow UDP 500 (ISAKMP) traffic
+      command: iptables -A INPUT -p udp --dport 500 -j ACCEPT
+
+    - name: Allow UDP 4500 (NAT-T) traffic
+      command: iptables -A INPUT -p udp --dport 4500 -j ACCEPT
+
+    - name: Allow ESP (Encapsulating Security Payload) traffic
+      command: iptables -A INPUT -p esp -j ACCEPT
+
+    - name: Allow forwarding of VPN traffic
+      command: iptables -A FORWARD -s 10.10.10.0/24 -j ACCEPT
+
+    - name: Allow forwarding of traffic to VPN clients
+      command: iptables -A FORWARD -d 10.10.10.0/24 -j ACCEPT
+
+    - name: NAT for VPN clients
+      command: iptables -t nat -A POSTROUTING -s 10.10.10.0/24 -o eth0 -j MASQUERADE

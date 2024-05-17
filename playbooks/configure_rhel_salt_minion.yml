@@ -1,6 +1,6 @@
 ---
 - name: Configure Salt Minion on RHEL 9
-  hosts: my_servers
+  hosts: all
   become: true
   vars:
     salt_master_ip: "192.168.254.70"
