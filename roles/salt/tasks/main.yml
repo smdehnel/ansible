@@ -1,0 +1,9 @@
+---
+- name: Install and configure Salt minion
+  include_tasks: install_salt_minion.yml
+
+- name: Configure Salt minion settings
+  include_tasks: configure_salt_minion.yml
+
+- name: Restart Salt minion service
+  include_tasks: restart_salt_minion.yml

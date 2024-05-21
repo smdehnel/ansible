@@ -1,0 +1,58 @@
+---
+- name: Copy SSH public key to servers
+  hosts: all
+  become: yes
+  vars:
+    ssh_public_key: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}"
+  tasks:
+    - name: Ensure .ssh directory exists for user
+      file:
+        path: /home/{{ ansible_user }}/.ssh
+        state: directory
+        mode: '0700'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      when: ansible_user != 'root'
+
+    - name: Ensure .ssh directory exists for root
+      file:
+        path: /root/.ssh
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: Check if SSH key is already in user authorized_keys
+      register: user_authorized_keys
+      become_user: "{{ ansible_user }}"
+      shell: "grep -q '{{ ssh_public_key }}' /home/{{ ansible_user }}/.ssh/authorized_keys"
+      ignore_errors: yes
+      when: ansible_user != 'root'
+
+    - name: Add SSH key to user authorized_keys if not present
+      lineinfile:
+        path: /home/{{ ansible_user }}/.ssh/authorized_keys
+        state: present
+        line: "{{ ssh_public_key }}"
+        create: yes
+        mode: '0600'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      become_user: "{{ ansible_user }}"
+      when: user_authorized_keys.rc != 0 and ansible_user != 'root'
+
+    - name: Check if SSH key is already in root authorized_keys
+      register: root_authorized_keys
+      shell: "grep -q '{{ ssh_public_key }}' /root/.ssh/authorized_keys"
+      ignore_errors: yes
+
+    - name: Add SSH key to root authorized_keys if not present
+      lineinfile:
+        path: /root/.ssh/authorized_keys
+        state: present
+        line: "{{ ssh_public_key }}"
+        create: yes
+        mode: '0600'
+        owner: root
+        group: root
+      when: root_authorized_keys.rc != 0

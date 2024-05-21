@@ -1,0 +1,14 @@
+---
+- name: Generate server configuration SLS file
+  template:
+    src: server_config.sls.j2
+    dest: /srv/salt/{{ hostname }}.sls
+  vars:
+    hostname: "{{ hostname }}"
+    dummy_ip: "{{ dummy_ip }}"
+    public_ip: "{{ public_ip }}"
+    front_ip: "{{ front_ip }}"
+    psk: "{{ psk }}"
+    hub: "{{ hub }}"
+    gre_local: "{{ gre_local }}"
+    gre_remote: "{{ gre_remote }}"

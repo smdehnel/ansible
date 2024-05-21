@@ -1,6 +1,6 @@
 ---
 - name: Configure Ubuntu servers as Salt Minions
-  hosts: your_target_hosts
+  hosts: all
   become: yes
   vars:
     salt_master_ip: "192.168.254.70"
@@ -23,8 +23,8 @@
 
     - name: Configure Salt Minion
       template:
-        src: /path/to/salt-minion.conf.j2
-        dest: /etc/salt/minion
+        src: /etc/ansible/roles/salt/templates/master.conf.j2
+        dest: /etc/salt/minion.d/master.conf
       notify: Restart Salt Minion Service
 
   handlers:

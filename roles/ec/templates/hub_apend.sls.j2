@@ -1,0 +1,17 @@
+"10":
+  name: {{ company }}
+  type: ipsec
+
+  gre:
+    tun_src_ip: {{ local_ip }}
+    tun_dst_ip: {{ public_ip }}
+    local_gre_ip: {{ hub_gre_ip }}
+    remote_gre_ip: {{ rdr_gre_ip }}
+
+  ipsec:
+    local_ip: {{ local_ip }}
+    peer_ip: {{ public_ip }}
+    pre_shared_key: "{{ psk }}"
+
+  redirector_routes:
+    - {{ dummy_ip }} #{{ company }} dummy ip

@@ -7,11 +7,13 @@ pihole2
 autolab1
 vpn-gateway1
 vpn-gateway2
+haproxy1
 
 [rocky9_servers]
 autolab1
 vpn-gateway1
 vpn-gateway2
+haproxy1
 
 [rhel9_servers]
 control1
@@ -27,4 +29,4 @@ vpn-gateway1
 vpn-gateway2
 
 [haproxy_servers]
-haproxy1 ansible_host=192.168.254.9
+haproxy1

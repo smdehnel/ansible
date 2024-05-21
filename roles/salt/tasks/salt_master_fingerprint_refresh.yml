@@ -1,0 +1,46 @@
+---
+- name: Refresh Salt Master Fingerprint
+  hosts: all
+  become: yes
+  vars:
+    salt_master_ip: "192.168.254.70"
+    master_fingerprint_line: "master_finger:"
+
+  tasks:
+    - name: Retrieve Salt Master Public Key Fingerprint
+      delegate_to: "{{ salt_master_ip }}"
+      command: salt-key -F
+      register: salt_key_output
+      run_once: true
+
+    - name: Debug Salt Key Output
+      debug:
+        var: salt_key_output.stdout
+      run_once: true
+
+    - name: Extract Master Fingerprint
+      set_fact:
+        master_fingerprint: "{{ (salt_key_output.stdout | regex_search('master\\.pub:\\s+([a-f0-9:]+)', '\\1')) | first }}"
+
+    - name: Fail if Master Fingerprint not found
+      fail:
+        msg: "Master fingerprint not found in the output"
+      when: master_fingerprint is undefined or master_fingerprint == ''
+
+    - name: Backup the original minion file
+      copy:
+        src: /etc/salt/minion
+        dest: /etc/salt/minion.bak
+        remote_src: yes
+
+    - name: Ensure master_finger is uncommented and updated
+      lineinfile:
+        path: /etc/salt/minion
+        regex: '^#?master_finger:'
+        line: "{{ master_fingerprint_line }} '{{ master_fingerprint }}'"
+        state: present
+
+    - name: Restart Salt Minion Service
+      systemd:
+        name: salt-minion
+        state: restarted

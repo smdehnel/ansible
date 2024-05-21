@@ -1,0 +1,50 @@
+include:
+  - includes.defaults
+
+host:
+  name: {{ company }}-rdr
+  dummy_ip: {{ dummy_ip }}
+  ip: {{ public_ip }}
+  netmask: 255.255.255.252
+
+nat:
+  use_haproxy: true
+  snat:
+    - { src_ip: {{ front_ip }}, public_ip: {{ public_ip }} }
+
+  dnat:
+    - { public_ip: {{ public_ip }}, dst_ip: {{ front_ip }}, dst_ports: ['25','465'], proto: ['tcp'] }
+    - { public_ip: {{ public_ip }}, dst_ip: {{ front_ip }}, dst_ports: ['80','443'], proto: ['tcp'] }
+    - { public_ip: {{ public_ip }}, dst_ip: {{ front_ip }}, dst_ports: ['4569','5060','10000:60000'], proto: ['udp'] }
+
+oam:
+  zabbix:
+    agent:
+      config:
+        HostMetadata: sbqiks4436127a4eee21a1d947fdbvfrd97f767f06f5d1857e48da646e534f444
+
+packages:
+  additional_packages:
+    - tcpdump
+    - net-tools
+
+vpn:
+  enabled: True
+  instance:
+    "1":
+      oam: True
+      name: {{ hub }}
+      type: ipsec
+      gre:
+        tun_src_ip: {{ public_ip }}
+        tun_dst_ip: 216.73.156.146
+        local_gre_ip: {{ rdr_gre_ip }}
+        remote_gre_ip: {{ hub_gre_ip }}
+      ipsec:
+        local_ip: {{ public_ip }}
+        peer_ip: 216.73.156.146
+        pre_shared_key: {{ psk }}
+
+policy_routes:
+  main:
+    - {{ front_ip }}  #{{ company }} front ip

@@ -1,0 +1,24 @@
+---
+- name: Apply common configuration to all nodes
+  hosts: all
+  roles:
+    - common
+
+- name: Configure VPN servers
+  hosts: vpn_servers
+  roles:
+    - vpn
+
+- name: Configure SaltStack
+  hosts: salt_minions
+  roles:
+    - salt
+
+- name: Configure Web Server
+  hosts: web_servers
+  roles:
+    - webserver
+
+- hosts: production
+  roles:
+    - role: ec

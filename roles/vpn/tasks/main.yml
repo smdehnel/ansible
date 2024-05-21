@@ -1,0 +1,22 @@
+---
+- name: Install StrongSwan
+  ansible.builtin.package:
+    name: strongswan
+    state: present
+
+- name: Configure IPsec
+  ansible.builtin.template:
+    src: ipsec.conf.j2
+    dest: /etc/strongswan/ipsec.conf
+  notify: Restart strongSwan
+
+- name: Enable IP forwarding
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+
+- name: Restart strongSwan
+  ansible.builtin.service:
+    name: strongswan
+    state: restarted
+    enabled: yes

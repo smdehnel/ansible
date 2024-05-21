@@ -1,0 +1,13 @@
+- name: Configure EC Server
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Render IPsec configuration
+      template:
+        src: /etc/ansible/roles/ec/templates/hub_append.sls.j2
+        dest: /srv/salt/datacenter/{{ company }}-append.sls
+
+    - name: Render Host configuration
+      template:
+        src: /etc/ansible/roles/ec/templates/rdr_config.sls.j2
+        dest: /srv/salt/{{ company }}-rdr.sls

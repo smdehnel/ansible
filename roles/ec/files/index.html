@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EC Data Configuration</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Lato', sans-serif;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1e1e1e;
+            border-radius: 8px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>EC Data Configuration</h1>
+    <form action="/submit" method="post">
+        <label for="company">Company</label>
+        <input type="text" id="company" name="company" required>
+
+        <label for="local_ip">Local IP</label>
+        <input type="text" id="local_ip" name="local_ip" required>
+
+        <label for="public_ip">Public IP</label>
+        <input type="text" id="public_ip" name="public_ip" required>
+
+        <label for="hub_gre_ip">Hub GRE IP</label>
+        <input type="text" id="hub_gre_ip" name="hub_gre_ip" required>
+
+        <label for="rdr_gre_ip">RDR GRE IP</label>
+        <input type="text" id="rdr_gre_ip" name="rdr_gre_ip" required>
+
+        <label for="psk">PSK</label>
+        <input type="text" id="psk" name="psk" required>
+
+        <label for="dummy_ip">Dummy IP</label>
+        <input type="text" id="dummy_ip" name="dummy_ip" required>
+
+        <label for="front_ip">Front IP</label>
+        <input type="text" id="front_ip" name="front_ip" required>
+
+        <label for="hub">Hub</label>
+        <input type="text" id="hub" name="hub" required>
+
+        <button type="submit">Submit</button>
+    </form>
+</div>
+</body>
+</html>
