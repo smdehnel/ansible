@@ -5,6 +5,6 @@
   tasks:
     - name: Create /etc/profile.d/bash_history.sh
       template:
-        src: bash_history.sh.j2
+        src: /etc/ansible/roles/common/templates/bash_history.sh.j2
         dest: /etc/profile.d/bash_history.sh
         mode: '0755'
