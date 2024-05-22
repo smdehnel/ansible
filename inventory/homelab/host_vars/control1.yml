@@ -1,0 +1,4 @@
+---
+hostname: control1
+ip_address: 192.168.254.80
+role: control

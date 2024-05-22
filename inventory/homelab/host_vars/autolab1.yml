@@ -1,0 +1,4 @@
+---
+hostname: autolab1
+ip_address: 192.168.254.70
+role: lab

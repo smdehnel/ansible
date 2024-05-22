@@ -1,0 +1,4 @@
+---
+hostname: ansible1
+ip_address: 192.168.254.86
+role: ansible

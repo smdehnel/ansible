@@ -1,0 +1,4 @@
+---
+hostname: vpn-gateway2
+ip_address: 192.168.254.8
+role: vpn

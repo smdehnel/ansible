@@ -1,0 +1,29 @@
+---
+- name: Ensure Docker and HAProxy container are running
+  hosts: haproxy_servers
+  become: yes
+  tasks:
+    - name: Remove podman-docker if present
+      yum:
+        name: podman-docker
+        state: absent
+
+    - name: Ensure Docker is installed
+      yum:
+        name: docker-ce
+        state: present
+
+    - name: Ensure Docker service is running and enabled
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Ensure HAProxy container is running
+      community.docker.docker_container:
+        name: haproxy
+        image: haproxy:latest
+        state: started
+        ports:
+          - "80:80"
+          - "443:443"

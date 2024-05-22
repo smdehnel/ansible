@@ -1,0 +1,7 @@
+# webserver1 specific variables
+hostname: webserver1
+ip_address: 192.168.254.13
+gateway: 192.168.254.254
+dns_servers:
+  - 192.168.254.15
+  - 192.168.254.16

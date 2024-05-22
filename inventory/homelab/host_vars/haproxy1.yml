@@ -1,0 +1,4 @@
+---
+hostname: haproxy1
+ip_address: 192.168.254.9
+role: haproxy

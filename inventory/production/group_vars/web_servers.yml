@@ -1,0 +1,10 @@
+# web_servers group variables
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+
+firewall_rules:
+  - { port: 80, proto: tcp }
+  - { port: 443, proto: tcp }
+
+ansible_user: sean
