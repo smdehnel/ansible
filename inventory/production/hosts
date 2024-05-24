@@ -5,3 +5,7 @@ webserver2
 [ec_servers]
 webserver1
 webserver2
+
+[ubuntu_servers]
+webserver1
+webserver2

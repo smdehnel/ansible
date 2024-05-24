@@ -1,0 +1,69 @@
+---
+- name: Install Homarr server
+  hosts: media_servers
+  become: yes
+
+  tasks:
+    - name: Update and upgrade the server
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install Docker
+      apt:
+        name: docker-ce
+        state: present
+
+    - name: Install Docker Compose
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-{{ ansible_system }}-{{ ansible_architecture }}"
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Create Homarr directories
+      file:
+        path: /opt/homarr/config
+        state: directory
+        mode: '0755'
+
+    - name: Create Docker Compose file for Homarr
+      copy:
+        dest: /opt/homarr/docker-compose.yml
+        content: |
+          version: '3.8'
+
+          services:
+            homarr:
+              image: ghcr.io/ajnart/homarr:latest
+              container_name: homarr
+              environment:
+                - HOMARR_PORT=7575
+              ports:
+                - "7575:7575"
+              volumes:
+                - /opt/homarr/config:/app/data
+              restart: unless-stopped
+
+    - name: Start Homarr container
+      shell: docker-compose up -d
+      args:
+        chdir: /opt/homarr

@@ -1,0 +1,20 @@
+---
+- name: Gather Salt Minion configuration
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure the directory exists for storing output
+      file:
+        path: /tmp/salt_configs
+        state: directory
+        mode: '0755'
+
+    - name: Gather /etc/salt/minion file content
+      slurp:
+        src: /etc/salt/minion
+      register: minion_config
+
+    - name: Write the configuration to a file on control node
+      copy:
+        content: "{{ minion_config.content | b64decode }}"
+        dest: "/tmp/salt_configs/{{ inventory_hostname }}_minion_config.txt"

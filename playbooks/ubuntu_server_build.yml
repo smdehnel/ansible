@@ -1,0 +1,6 @@
+---
+- name: Apply Ubuntu Server Build configurations
+  hosts: all
+  become: yes
+  roles:
+    - ubuntu_server_build

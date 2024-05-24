@@ -1,0 +1,35 @@
+---
+- name: Configure Ubuntu servers as Salt Minions
+  hosts: all
+  become: yes
+  vars:
+    salt_master_ip: "192.168.254.70"
+
+  tasks:
+    - name: Import SaltStack repository GPG key
+      shell: sudo curl -fsSL -o /etc/apt/keyrings/salt-archive-keyring-2023.gpg https://repo.saltproject.io/salt/py3/ubuntu/22.04/amd64/SALT-PROJECT-GPG-PUBKEY-2023.gpg
+
+    - name: Add SaltStack repository to apt sources
+      shell: echo "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://repo.saltproject.io/salt/py3/ubuntu/22.04/amd64/latest jammy main" | sudo tee /etc/apt/sources.list.d/salt.list
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Salt Minion
+      apt:
+        name: salt-minion
+        state: present
+
+    - name: Configure Salt Minion
+      template:
+        src: /etc/ansible/roles/salt/templates/master.conf.j2
+        dest: /etc/salt/minion.d/master.conf
+      notify: Restart Salt Minion Service
+
+  handlers:
+    - name: Restart Salt Minion Service
+      service:
+        name: salt-minion
+        state: restarted
+

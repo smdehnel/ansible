@@ -1,0 +1,28 @@
+- name: Install Rundeck on autolab1
+  hosts: autolab1
+  become: yes
+  tasks:
+    - name: Ensure necessary packages are installed
+      yum:
+        name:
+          - java-1.8.0-openjdk
+          - yum-utils
+          - firewalld
+        state: present
+
+    - name: Start and enable firewalld
+      service:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: Open necessary ports in firewall
+      firewalld:
+        port: "{{ item }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      with_items:
+        - 4440/tcp
+        - 8080/tcp
+        - 8443/tcp

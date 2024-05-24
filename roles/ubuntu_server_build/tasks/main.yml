@@ -1,0 +1,6 @@
+---
+- import_tasks: add_bash_history_script.yml
+- import_tasks: configure_history.yml
+- import_tasks: configure_ubuntu_salt_minion.yml
+- import_tasks: salt_master_fingerprint_refresh.yml
+- import_tasks: fix_apt_upgrade.yml

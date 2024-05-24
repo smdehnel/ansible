@@ -1,0 +1,10 @@
+---
+- name: Add bash_history.sh to /etc/profile.d
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create /etc/profile.d/bash_history.sh
+      template:
+        src: /etc/ansible/roles/common/templates/bash_history.sh.j2
+        dest: /etc/profile.d/bash_history.sh
+        mode: '0755'

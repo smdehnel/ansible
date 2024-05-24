@@ -1,0 +1,18 @@
+---
+- name: Fix apt upgrade issues on Ubuntu servers
+  hosts: ubuntu_servers
+  become: yes
+  tasks:
+    - name: Set DEBIAN_FRONTEND to noninteractive and upgrade packages
+      shell: |
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get -y upgrade
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: Fix broken packages
+      shell: |
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get -f install
+      environment:
+        DEBIAN_FRONTEND: noninteractive

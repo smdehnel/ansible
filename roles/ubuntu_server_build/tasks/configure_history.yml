@@ -1,0 +1,40 @@
+---
+- name: Configure history settings
+  hosts: all
+  become: yes
+  vars:
+    ansible_user: "{{ lookup('env', 'USER') }}"  # Use the environment variable for the current user
+  tasks:
+    - name: Ensure .bashrc has correct history settings
+      lineinfile:
+        path: /home/{{ ansible_user }}/.bashrc
+        create: yes
+        line: "{{ item }}"
+        state: present
+      with_items:
+        - 'HISTSIZE=10000'
+        - 'HISTFILESIZE=20000'
+        - 'shopt -s histappend'
+        - 'PROMPT_COMMAND="history -a; history -n; $PROMPT_COMMAND"'
+      become_user: "{{ ansible_user }}"
+      when: ansible_user != 'root'
+
+    - name: Ensure .bashrc has correct history settings for root
+      lineinfile:
+        path: /root/.bashrc
+        create: yes
+        line: "{{ item }}"
+        state: present
+      with_items:
+        - 'HISTSIZE=10000'
+        - 'HISTFILESIZE=20000'
+        - 'shopt -s histappend'
+        - 'PROMPT_COMMAND="history -a; history -n; $PROMPT_COMMAND"'
+
+    - name: Source .bashrc for all users
+      shell: . /home/{{ ansible_user }}/.bashrc
+      become_user: "{{ ansible_user }}"
+      when: ansible_user != 'root'
+
+    - name: Source .bashrc for root
+      shell: . /root/.bashrc
