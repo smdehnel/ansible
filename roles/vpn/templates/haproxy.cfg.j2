@@ -1,5 +1,3 @@
-# /etc/haproxy/haproxy.cfg
-
 global
     log /dev/log    local0
     log /dev/log    local1 notice
@@ -10,18 +8,9 @@ global
     group haproxy
     daemon
 
-    # Default SSL material locations
-    ca-base /etc/ssl/certs
-    crt-base /etc/ssl/private
-
-    # See: https://ssl-config.mozilla.org/#server=haproxy&server-version=2.2
-    ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
-    ssl-default-bind-options no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
-
 defaults
     log     global
-    mode    http
-    option  httplog
+    option  tcplog
     option  dontlognull
     timeout connect 5000
     timeout client  50000
@@ -34,11 +23,13 @@ defaults
     errorfile 503 /etc/haproxy/errors/503.http
     errorfile 504 /etc/haproxy/errors/504.http
 
-frontend main
-    bind *:80
-    default_backend servers
+frontend vpn_frontend
+    bind *:51820
+    mode tcp
+    default_backend vpn_backends
 
-backend servers
+backend vpn_backends
     balance roundrobin
-    server server1 vpn-gateway1:5000 check
-    server server2 vpn-gateway2:5000 check
+    server vpn_gateway1 {{ vpn_gateway1.private_ip }}:51820 check
+    server vpn_gateway2 {{ vpn_gateway2.private_ip }}:51820 check
+

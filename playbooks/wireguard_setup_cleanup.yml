@@ -1,0 +1,40 @@
+---
+- name: Verify and clean WireGuard configuration files on clients
+  hosts: all
+  become: yes
+  tasks:
+    - name: Check if wg0.conf file exists
+      ansible.builtin.stat:
+        path: /etc/wireguard/wg0.conf
+      register: wg0_conf_status
+
+    - name: Remove "| wg pubkey" from PublicKey line if present
+      ansible.builtin.lineinfile:
+        path: /etc/wireguard/wg0.conf
+        regexp: '^(PublicKey\s*=.*)\|\s*wg\s*pubkey$'
+        line: '\1'
+        backrefs: yes
+      when: wg0_conf_status.stat.exists
+      notify:
+        - Restart WireGuard
+
+  handlers:
+    - name: Restart WireGuard
+      ansible.builtin.systemd:
+        name: wg-quick@wg0
+        state: restarted
+      failed_when: false
+      register: restart_result
+
+    - name: Check and force restart WireGuard if initial restart fails
+      block:
+        - name: Down WireGuard interface
+          ansible.builtin.command: wg-quick down wg0
+          ignore_errors: yes
+
+        - name: Restart WireGuard
+          ansible.builtin.systemd:
+            name: wg-quick@wg0
+            state: restarted
+      when: restart_result is failed
+

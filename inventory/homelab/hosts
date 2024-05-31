@@ -6,10 +6,9 @@ pihole1
 pihole2
 autolab1
 vpn-gateway1
-vpn-gateway2
-haproxy1
 homarr
 jellyfin
+certs
 
 [media_servers]
 homarr
@@ -18,8 +17,6 @@ jellyfin
 [rocky9_servers]
 autolab1
 vpn-gateway1
-vpn-gateway2
-haproxy1
 
 [rhel9_servers]
 control1
@@ -31,10 +28,7 @@ pihole1
 pihole2
 homarr
 jellyfin
+certs
 
 [vpn_servers]
 vpn-gateway1
-vpn-gateway2
-
-[haproxy_servers]
-haproxy1

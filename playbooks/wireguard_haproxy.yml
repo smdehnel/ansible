@@ -1,0 +1,80 @@
+---
+- name: Configure HAProxy for VPN traffic
+  hosts: haproxy1
+  become: yes
+  vars:
+    vpn_gateway1:
+      public_ip: 192.168.254.7
+      private_ip: 10.0.69.2
+    vpn_gateway2:
+      public_ip: 192.168.254.8
+      private_ip: 10.0.69.3
+    haproxy1:
+      public_ip: 192.168.254.9
+      private_ip: 10.0.69.1
+
+  tasks:
+    - name: Install HAProxy
+      ansible.builtin.package:
+        name: haproxy
+        state: present
+
+    - name: Create /run/haproxy directory
+      ansible.builtin.file:
+        path: /run/haproxy
+        state: directory
+        owner: haproxy
+        group: haproxy
+        mode: '0755'
+
+    - name: Configure HAProxy for VPN
+      ansible.builtin.template:
+        src: /etc/ansible/roles/vpn/templates/haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        mode: '0644'
+
+    - name: Verify HAProxy configuration
+      ansible.builtin.command:
+        cmd: haproxy -c -f /etc/haproxy/haproxy.cfg
+      register: haproxy_config_check
+      failed_when: haproxy_config_check.rc != 0
+      changed_when: false
+
+    - name: Start and enable HAProxy
+      ansible.builtin.systemd:
+        name: haproxy
+        enabled: yes
+        state: started
+      when: haproxy_config_check.rc == 0
+
+- name: Verify VPN tunnels
+  hosts: all
+  become: yes
+  tasks:
+    - name: Check if WireGuard interface is up
+      ansible.builtin.command:
+        cmd: ip link show wg0
+      register: wg_interface
+      failed_when: "'state UP' not in wg_interface.stdout"
+      changed_when: false
+
+    - name: Ping VPN Gateway 1 private IP
+      ansible.builtin.command:
+        cmd: ping -c 3 10.0.69.2
+      register: ping_vpn_gateway1
+      changed_when: false
+
+    - name: Ping VPN Gateway 2 private IP
+      ansible.builtin.command:
+        cmd: ping -c 3 10.0.69.3
+      register: ping_vpn_gateway2
+      changed_when: false
+
+    - name: Display VPN Gateway 1 ping results
+      ansible.builtin.debug:
+        msg: "{{ ping_vpn_gateway1.stdout }}"
+
+    - name: Display VPN Gateway 2 ping results
+      ansible.builtin.debug:
+        msg: "{{ ping_vpn_gateway2.stdout }}"
+

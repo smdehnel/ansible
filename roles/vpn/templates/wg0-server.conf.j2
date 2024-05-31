@@ -1,0 +1,11 @@
+[Interface]
+PrivateKey = {{ lookup('file', '/etc/wireguard/privatekey_vpn-gateway1') }}
+Address = 10.0.69.1/24
+ListenPort = 51820
+
+{% for client in clients %}
+[Peer]
+PublicKey = {{ lookup('file', '/etc/wireguard/publickey_' + client.name) }}
+AllowedIPs = {{ client.private_ip }}/32
+{% endfor %}
+

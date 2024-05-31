@@ -1,0 +1,155 @@
+---
+- name: Configure WireGuard VPN on vpn-gateway1 and clients
+  hosts: vpn-gateway1
+  become: yes
+  vars:
+    vpn_gateway:
+      public_ip: 192.168.254.7
+      private_ip: 10.0.69.1
+    clients:
+      - { name: 'autolab1', public_ip: '192.168.254.70', private_ip: '10.0.69.2' }
+      - { name: 'homarr', public_ip: '192.168.254.17', private_ip: '10.0.69.3' }
+      - { name: 'jellyfin', public_ip: '192.168.254.18', private_ip: '10.0.69.4' }
+      - { name: 'pihole1', public_ip: '192.168.254.15', private_ip: '10.0.69.5' }
+      - { name: 'pihole2', public_ip: '192.168.254.16', private_ip: '10.0.69.6' }
+      - { name: 'webserver1', public_ip: '192.168.254.13', private_ip: '10.0.69.7' }
+      - { name: 'webserver2', public_ip: '192.168.254.14', private_ip: '10.0.69.8' }
+      - { name: 'certs', public_ip: '173.230.135.146', private_ip: '10.0.69.9' }
+
+  tasks:
+    - name: Install WireGuard on vpn-gateway1
+      ansible.builtin.dnf:
+        name: wireguard-tools
+        state: present
+
+    - name: Enable IP forwarding on vpn-gateway1
+      ansible.builtin.sysctl:
+        name: net.ipv4.ip_forward
+        value: 1
+        state: present
+
+    - name: Generate WireGuard private key for server
+      ansible.builtin.command: wg genkey
+      register: vpn_private_key
+      no_log: true
+
+    - name: Store WireGuard private key for server
+      ansible.builtin.copy:
+        content: "{{ vpn_private_key.stdout }}"
+        dest: /etc/wireguard/privatekey_vpn-gateway1
+        mode: '0600'
+
+    - name: Generate WireGuard public key for server
+      ansible.builtin.shell: echo "{{ vpn_private_key.stdout }}" | wg pubkey
+      register: vpn_public_key
+
+    - name: Store WireGuard public key for server
+      ansible.builtin.copy:
+        content: "{{ vpn_public_key.stdout }}"
+        dest: /etc/wireguard/publickey_vpn-gateway1
+        mode: '0644'
+
+    - name: Ensure /etc/wireguard directory exists on clients
+      ansible.builtin.file:
+        path: /etc/wireguard
+        state: directory
+        mode: '0755'
+      delegate_to: "{{ item.name }}"
+      with_items: "{{ clients }}"
+
+    - name: Generate WireGuard private key for each client
+      ansible.builtin.command: wg genkey
+      register: client_private_keys
+      with_items: "{{ clients }}"
+      no_log: true
+
+    - name: Store WireGuard private key for each client
+      ansible.builtin.copy:
+        content: "{{ item.stdout }}"
+        dest: "/etc/wireguard/privatekey_{{ item.item.name }}"
+        mode: '0600'
+      with_items: "{{ client_private_keys.results }}"
+
+    - name: Generate WireGuard public key for each client
+      ansible.builtin.shell: echo "{{ item.stdout }}" | wg pubkey
+      register: client_public_keys
+      with_items: "{{ client_private_keys.results }}"
+      changed_when: "'wg pubkey' not in item.stdout"
+
+    - name: Set fact for client public keys
+      ansible.builtin.set_fact:
+        client_public_keys_dict: "{{ dict(clients | map(attribute='name') | zip(client_public_keys.results | map(attribute='stdout'))) }}"
+
+    - name: Set fact for client private keys
+      ansible.builtin.set_fact:
+        client_private_keys_dict: "{{ dict(clients | map(attribute='name') | zip(client_private_keys.results | map(attribute='stdout'))) }}"
+
+    - name: Debug client public keys dictionary
+      ansible.builtin.debug:
+        var: client_public_keys_dict
+
+    - name: Debug client private keys dictionary
+      ansible.builtin.debug:
+        var: client_private_keys_dict
+
+    - name: Configure WireGuard on VPN Gateway 1
+      ansible.builtin.copy:
+        dest: /etc/wireguard/wg0.conf
+        content: |
+          [Interface]
+          PrivateKey = {{ vpn_private_key.stdout }}
+          Address = 10.0.69.1/24
+          ListenPort = 51820
+
+          {% for client in clients %}
+          [Peer]
+          PublicKey = {{ client_public_keys_dict[client.name] }}
+          AllowedIPs = {{ client.private_ip }}/32
+          Endpoint = {{ client.public_ip }}:51820
+          PersistentKeepalive = 21
+          {% endfor %}
+        mode: '0600'
+
+    - name: Create WireGuard client configuration files
+      ansible.builtin.copy:
+        dest: "/etc/wireguard/wg0.conf"
+        content: |
+          [Interface]
+          PrivateKey = {{ client_private_keys_dict[item.name] }}
+          Address = {{ item.private_ip }}/24
+
+          [Peer]
+          PublicKey = {{ vpn_public_key.stdout }}
+          AllowedIPs = 10.0.69.1/32
+          Endpoint = {{ vpn_gateway.public_ip }}:51820
+          PersistentKeepalive = 21
+        mode: '0600'
+      with_items: "{{ clients }}"
+      delegate_to: "{{ item.name }}"
+
+    - name: Start and enable WireGuard on server
+      ansible.builtin.systemd:
+        name: wg-quick@wg0
+        enabled: yes
+        state: started
+
+    - name: Start and enable WireGuard on clients
+      ansible.builtin.systemd:
+        name: wg-quick@wg0
+        enabled: yes
+        state: started
+      with_items: "{{ clients }}"
+
+    - name: Check and force restart WireGuard if initial restart fails
+      block:
+        - name: Down WireGuard interface
+          ansible.builtin.command:
+            cmd: wg-quick down wg0
+          register: restart_result
+          ignore_errors: yes
+
+        - name: Restart WireGuard
+          ansible.builtin.systemd:
+            name: wg-quick@wg0
+            state: restarted
+          when: restart_result.failed

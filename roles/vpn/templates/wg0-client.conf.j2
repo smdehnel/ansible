@@ -1,0 +1,10 @@
+[Interface]
+PrivateKey = {{ lookup('file', '/etc/wireguard/privatekey_' + inventory_hostname) }}
+Address = {{ item.private_ip }}/24
+
+[Peer]
+PublicKey = {{ lookup('file', '/etc/wireguard/publickey_vpn-gateway1') }}
+AllowedIPs = 0.0.0.0/0
+Endpoint = {{ vpn_gateway.public_ip }}:51820
+PersistentKeepalive = 21
+

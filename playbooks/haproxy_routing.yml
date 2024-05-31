@@ -1,0 +1,111 @@
+---
+- name: Configure routes for VPN traffic
+  hosts: haproxy1
+  become: yes
+  vars:
+    vpn_gateway1:
+      public_ip: 192.168.254.7
+      private_ip: 10.0.69.2
+    vpn_gateway2:
+      public_ip: 192.168.254.8
+      private_ip: 10.0.69.3
+    haproxy1:
+      public_ip: 192.168.254.9
+      private_ip: 10.0.69.1
+
+  tasks:
+    - name: Check if route to VPN Gateway 1 exists
+      ansible.builtin.command:
+        cmd: ip route show 10.0.69.2/32
+      register: route_check_1
+      failed_when: false
+      changed_when: false
+
+    - name: Add route to VPN Gateway 1 if not exists
+      ansible.builtin.command:
+        cmd: ip route add 10.0.69.2/32 dev wg0
+      when: route_check_1.rc != 0
+
+    - name: Check if route to VPN Gateway 2 exists
+      ansible.builtin.command:
+        cmd: ip route show 10.0.69.3/32
+      register: route_check_2
+      failed_when: false
+      changed_when: false
+
+    - name: Add route to VPN Gateway 2 if not exists
+      ansible.builtin.command:
+        cmd: ip route add 10.0.69.3/32 dev wg0
+      when: route_check_2.rc != 0
+
+    - name: Ensure route file exists for ens18
+      ansible.builtin.file:
+        path: /etc/sysconfig/network-scripts/route-{{ ansible_default_ipv4.interface }}
+        state: touch
+        mode: '0644'
+
+    - name: Persist route to VPN Gateway 1
+      ansible.builtin.lineinfile:
+        path: /etc/sysconfig/network-scripts/route-{{ ansible_default_ipv4.interface }}
+        line: "10.0.69.2/32 dev wg0"
+        create: yes
+
+    - name: Persist route to VPN Gateway 2
+      ansible.builtin.lineinfile:
+        path: /etc/sysconfig/network-scripts/route-{{ ansible_default_ipv4.interface }}
+        line: "10.0.69.3/32 dev wg0"
+        create: yes
+
+- name: Verify VPN tunnels
+  hosts: all
+  become: yes
+  tasks:
+    - name: Check if WireGuard interface is up
+      ansible.builtin.command:
+        cmd: ip link show wg0
+      register: wg_interface
+      failed_when: "'UP' not in wg_interface.stdout"
+      changed_when: false
+
+    - name: Display WireGuard status
+      ansible.builtin.command:
+        cmd: wg show
+      register: wg_status
+      changed_when: false
+
+    - name: Display WireGuard status results
+      ansible.builtin.debug:
+        msg: "{{ wg_status.stdout }}"
+
+    - name: Check routes
+      ansible.builtin.command:
+        cmd: ip route
+      register: route_check
+      changed_when: false
+
+    - name: Display route table
+      ansible.builtin.debug:
+        msg: "{{ route_check.stdout }}"
+
+    - name: Ping VPN Gateway 1 private IP
+      ansible.builtin.command:
+        cmd: ping -c 3 10.0.69.2
+      register: ping_vpn_gateway1
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display VPN Gateway 1 ping results
+      ansible.builtin.debug:
+        msg: "{{ ping_vpn_gateway1.stdout }}"
+
+    - name: Ping VPN Gateway 2 private IP
+      ansible.builtin.command:
+        cmd: ping -c 3 10.0.69.3
+      register: ping_vpn_gateway2
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display VPN Gateway 2 ping results
+      ansible.builtin.debug:
+        msg: "{{ ping_vpn_gateway2.stdout }}"
+
