@@ -4,16 +4,16 @@
   become: yes
   vars:
     vpn_gateway:
-      public_ip: 192.168.254.7
+      public_ip: 10.1.1.10
       private_ip: 10.0.69.1
     clients:
-      - { name: 'autolab1', public_ip: '192.168.254.70', private_ip: '10.0.69.2' }
-      - { name: 'homarr', public_ip: '192.168.254.17', private_ip: '10.0.69.3' }
-      - { name: 'jellyfin', public_ip: '192.168.254.18', private_ip: '10.0.69.4' }
-      - { name: 'pihole1', public_ip: '192.168.254.15', private_ip: '10.0.69.5' }
-      - { name: 'pihole2', public_ip: '192.168.254.16', private_ip: '10.0.69.6' }
-      - { name: 'webserver1', public_ip: '192.168.254.13', private_ip: '10.0.69.7' }
-      - { name: 'webserver2', public_ip: '192.168.254.14', private_ip: '10.0.69.8' }
+      - { name: 'autolab1', public_ip: '10.1.1.7', private_ip: '10.0.69.2' }
+      - { name: 'homarr', public_ip: '10.1.1.15', private_ip: '10.0.69.3' }
+      - { name: 'jellyfin', public_ip: '10.1.1.14', private_ip: '10.0.69.4' }
+      - { name: 'pihole1', public_ip: '10.1.1.3', private_ip: '10.0.69.5' }
+      - { name: 'pihole2', public_ip: '10.1.1.4', private_ip: '10.0.69.6' }
+      - { name: 'webserver1', public_ip: '10.1.1.12', private_ip: '10.0.69.7' }
+      - { name: 'webserver2', public_ip: '10.1.1.13', private_ip: '10.0.69.8' }
       - { name: 'certs', public_ip: '173.230.135.146', private_ip: '10.0.69.9' }
 
   tasks:
@@ -120,7 +120,7 @@
 
           [Peer]
           PublicKey = {{ vpn_public_key.stdout }}
-          AllowedIPs = 10.0.69.1/32
+          AllowedIPs = 10.0.69.0/24
           Endpoint = {{ vpn_gateway.public_ip }}:51820
           PersistentKeepalive = 21
         mode: '0600'

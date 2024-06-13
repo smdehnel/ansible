@@ -1,14 +1,18 @@
 [my_servers]
-control1
-ansible1
-ansible2
 pihole1
 pihole2
 autolab1
+pvehst1
+pvehst2
 vpn-gateway1
 homarr
 jellyfin
-certs
+skyguard1
+undercoverunicorn
+
+[proxmox_hosts]
+pvehst1
+pvehst2
 
 [media_servers]
 homarr
@@ -18,17 +22,19 @@ jellyfin
 autolab1
 vpn-gateway1
 
+[debian_servers]
+pvehst1
+pvehst2
+
 [rhel9_servers]
-control1
-ansible1
-ansible2
 
 [ubuntu_servers]
 pihole1
 pihole2
 homarr
 jellyfin
-certs
+skyguard1
+undercoverunicorn
 
 [vpn_servers]
 vpn-gateway1

@@ -1,0 +1,127 @@
+---
+- name: Install and configure Promtail on clients
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Ensure unzip is installed
+      apt:
+        name: unzip
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Ensure unzip is installed
+      yum:
+        name: unzip
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Check if Promtail is installed
+      stat:
+        path: /usr/local/bin/promtail
+      register: promtail_installed
+
+    - name: Download Promtail
+      shell: |
+        wget https://github.com/grafana/loki/releases/download/v2.2.1/promtail-linux-amd64.zip -O /tmp/promtail-linux-amd64.zip
+      when: promtail_installed.stat.exists == False
+
+    - name: Unzip Promtail
+      unarchive:
+        src: /tmp/promtail-linux-amd64.zip
+        dest: /tmp/
+        remote_src: yes
+      when: promtail_installed.stat.exists == False
+
+    - name: Move Promtail binary to /usr/local/bin
+      command: mv /tmp/promtail-linux-amd64 /usr/local/bin/promtail
+      when: promtail_installed.stat.exists == False
+
+    - name: Set correct permissions for Promtail binary
+      file:
+        path: /usr/local/bin/promtail
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Ensure proper SELinux context for Promtail binary
+      command: chcon -t bin_t /usr/local/bin/promtail
+      when: ansible_selinux.status == "enabled"
+
+    - name: Create Promtail configuration directory
+      file:
+        path: /etc/promtail
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Copy Promtail configuration file
+      copy:
+        dest: /etc/promtail/promtail-config.yml
+        content: |
+          server:
+            http_listen_port: 9080
+            grpc_listen_port: 0
+
+          positions:
+            filename: /tmp/positions.yaml
+
+          clients:
+            - url: http://10.1.1.11:3100/loki/api/v1/push
+
+          scrape_configs:
+          - job_name: system
+            static_configs:
+            - targets:
+                - localhost
+              labels:
+                job: varlogs
+                __path__: /data/docker/logs/*log
+
+    - name: Create systemd service for Promtail
+      copy:
+        dest: /etc/systemd/system/promtail.service
+        content: |
+          [Unit]
+          Description=Promtail Service
+          After=network.target
+
+          [Service]
+          ExecStart=/usr/local/bin/promtail -config.file=/etc/promtail/promtail-config.yml
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start and enable Promtail
+      systemd:
+        name: promtail
+        state: started
+        enabled: yes
+
+    - name: Ensure Promtail service is restarted and running
+      systemd:
+        name: promtail
+        state: restarted
+        enabled: yes
+
+    - name: Wait for Promtail service to stabilize
+      pause:
+        seconds: 15
+
+    - name: Verify Promtail service is active and running
+      systemd:
+        name: promtail
+        state: started
+        enabled: yes
+      register: result
+
+    - name: Debug Promtail service status
+      debug:
+        var: result
+
+    - name: Fail if Promtail is not running
+      fail:
+        msg: "Promtail service failed to start"
+      when: result.status.ActiveState != "active"

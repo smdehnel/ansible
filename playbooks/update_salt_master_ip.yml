@@ -1,0 +1,17 @@
+---
+- name: Update Salt master IP address
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update master.conf with the new Salt master IP
+      replace:
+        path: /etc/salt/minion.d/master.conf
+        regexp: '192.168.254.70'
+        replace: '10.1.1.7'
+      notify: Restart Salt Minion
+
+  handlers:
+    - name: Restart Salt Minion
+      service:
+        name: salt-minion
+        state: restarted

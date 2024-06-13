@@ -1,26 +1,20 @@
 [my_servers]
-control1
-ansible1
-ansible2
 pihole1
 pihole2
 autolab1
 vpn-gateway1
-certs
+undercoverunicorn
 
 [rocky9_servers]
 autolab1
 vpn-gateway1
 
 [rhel9_servers]
-control1
-ansible1
-ansible2
 
 [ubuntu_servers]
 pihole1
 pihole2
-certs
+undercoverunicorn
 
 [vpn_servers]
 vpn-gateway1
