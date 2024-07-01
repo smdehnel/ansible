@@ -9,3 +9,6 @@ webserver2
 [ubuntu_servers]
 webserver1
 webserver2
+
+[CA]
+autolab1 ansible_host=10.1.1.7

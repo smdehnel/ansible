@@ -1,0 +1,46 @@
+---
+- name: Remove residual Salt configuration files and directories
+  hosts: all
+  become: yes
+  tasks:
+    - name: Remove /etc/salt directory
+      file:
+        path: /etc/salt
+        state: absent
+
+    - name: Remove /var/cache/salt directory
+      file:
+        path: /var/cache/salt
+        state: absent
+
+    - name: Remove /var/log/salt directory
+      file:
+        path: /var/log/salt
+        state: absent
+
+    - name: Remove /var/run/salt directory
+      file:
+        path: /var/run/salt
+        state: absent
+
+    - name: Remove /srv/salt directory
+      file:
+        path: /srv/salt
+        state: absent
+
+    - name: Remove /usr/local/etc/salt directory
+      file:
+        path: /usr/local/etc/salt
+        state: absent
+
+    - name: Remove Salt packages from /usr/local/lib/python*/dist-packages/
+      shell: rm -rf /usr/local/lib/python*/dist-packages/salt*
+
+    - name: Remove Salt binaries from /usr/local/bin/
+      shell: rm -rf /usr/local/bin/salt*
+
+    - name: Ensure autoremove is run
+      apt:
+        autoremove: yes
+        purge: yes
+      when: ansible_os_family == "Debian"

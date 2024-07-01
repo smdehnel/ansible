@@ -1,0 +1,63 @@
+---
+- name: Install Easy-RSA and Generate CSR on clients
+  hosts: all
+  tasks:
+    - name: Install dependencies on Debian
+      apt:
+        name: 
+          - wget
+          - tar
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install dependencies on RedHat
+      yum:
+        name: 
+          - wget
+          - tar
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Download Easy-RSA
+      get_url:
+        url: https://github.com/OpenVPN/easy-rsa/releases/download/v3.0.8/EasyRSA-3.0.8.tgz
+        dest: /tmp/EasyRSA-3.0.8.tgz
+        mode: '0644'
+
+    - name: Extract Easy-RSA
+      unarchive:
+        src: /tmp/EasyRSA-3.0.8.tgz
+        dest: /tmp/
+        remote_src: yes
+
+    - name: Move Easy-RSA to /usr/local
+      command: mv /tmp/EasyRSA-3.0.8 /usr/local/easy-rsa
+      args:
+        creates: /usr/local/easy-rsa
+
+    - name: Create symlink for easyrsa
+      file:
+        src: /usr/local/easy-rsa/easyrsa
+        dest: /usr/local/bin/easyrsa
+        state: link
+
+    - name: Set Easy-RSA path
+      set_fact:
+        easyrsa_path: "/usr/local/bin/easyrsa"
+
+    - name: Create Easy-RSA directory
+      file:
+        path: /etc/easy-rsa
+        state: directory
+        mode: '0755'
+
+    - name: Check if PKI is already initialized
+      stat:
+        path: /etc/easy-rsa/pki
+      register: pki_dir
+
+    - name: Initialize PKI
+      command: "{{ easyrsa_path }} init-pki"
+      args:
+        chdir: /etc/easy-rsa
+      when: not pki_dir.stat.exists

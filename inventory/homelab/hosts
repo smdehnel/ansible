@@ -5,7 +5,7 @@ autolab1
 pvehst1
 pvehst2
 vpn-gateway1
-homarr
+mediahub
 jellyfin
 skyguard1
 undercoverunicorn
@@ -15,7 +15,7 @@ pvehst1
 pvehst2
 
 [media_servers]
-homarr
+mediahub
 jellyfin
 
 [rocky9_servers]
@@ -31,10 +31,13 @@ pvehst2
 [ubuntu_servers]
 pihole1
 pihole2
-homarr
+mediahub
 jellyfin
 skyguard1
 undercoverunicorn
 
 [vpn_servers]
 vpn-gateway1
+
+[CA]
+autolab1 ansible_host=10.1.1.7

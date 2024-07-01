@@ -1,0 +1,135 @@
+---
+- name: Generate CSR and sign on CA server
+  hosts: all
+  vars:
+    client_hostname: "{{ inventory_hostname }}"
+    easyrsa_path: "/usr/local/bin/easyrsa"
+  tasks:
+    - name: Install dependencies on Debian
+      apt:
+        name: 
+          - wget
+          - tar
+        state: present
+      when: ansible_os_family == "Debian" and inventory_hostname != "autolab1"
+
+    - name: Install dependencies on RedHat
+      yum:
+        name: 
+          - wget
+          - tar
+        state: present
+      when: ansible_os_family == "RedHat" and inventory_hostname != "autolab1"
+
+    - name: Download Easy-RSA
+      get_url:
+        url: https://github.com/OpenVPN/easy-rsa/releases/download/v3.0.8/EasyRSA-3.0.8.tgz
+        dest: /tmp/EasyRSA-3.0.8.tgz
+        mode: '0644'
+      when: inventory_hostname != "autolab1"
+
+    - name: Extract Easy-RSA
+      unarchive:
+        src: /tmp/EasyRSA-3.0.8.tgz
+        dest: /tmp/
+        remote_src: yes
+      when: inventory_hostname != "autolab1"
+
+    - name: Move Easy-RSA to /usr/local
+      command: mv /tmp/EasyRSA-3.0.8 /usr/local/easy-rsa
+      args:
+        creates: /usr/local/easy-rsa
+      when: inventory_hostname != "autolab1"
+
+    - name: Create symlink for easyrsa
+      file:
+        src: /usr/local/easy-rsa/easyrsa
+        dest: /usr/local/bin/easyrsa
+        state: link
+      when: inventory_hostname != "autolab1"
+
+    - name: Create Easy-RSA directory
+      file:
+        path: /etc/easy-rsa
+        state: directory
+        mode: '0755'
+      when: inventory_hostname != "autolab1"
+
+    - name: Check if PKI is already initialized
+      stat:
+        path: /etc/easy-rsa/pki
+      register: pki_dir
+      when: inventory_hostname != "autolab1"
+
+    - name: Initialize PKI
+      command: "{{ easyrsa_path }} init-pki"
+      args:
+        chdir: /etc/easy-rsa
+      when: not pki_dir.stat.exists and inventory_hostname != "autolab1"
+
+    - name: Generate Certificate Request
+      command: "{{ easyrsa_path }} --batch gen-req {{ client_hostname }} nopass"
+      args:
+        chdir: /etc/easy-rsa
+      when: inventory_hostname != "autolab1"
+
+    - name: Fetch the CSR
+      fetch:
+        src: /etc/easy-rsa/pki/reqs/{{ client_hostname }}.req
+        dest: /tmp/{{ client_hostname }}.req
+        flat: yes
+      when: inventory_hostname != "autolab1"
+
+- name: Sign CSR on CA server
+  hosts: autolab1
+  vars:
+    easyrsa_path: "/usr/local/bin/easyrsa"
+  tasks:
+    - name: Create Easy-RSA directory
+      file:
+        path: /etc/easy-rsa
+        state: directory
+        mode: '0755'
+
+    - name: Check if PKI is already initialized
+      stat:
+        path: /etc/easy-rsa/pki
+      register: pki_dir
+
+    - name: Initialize PKI
+      command: "{{ easyrsa_path }} init-pki"
+      args:
+        chdir: /etc/easy-rsa
+      when: not pki_dir.stat.exists
+
+    - name: Build CA
+      command: "{{ easyrsa_path }} build-ca nopass"
+      args:
+        chdir: /etc/easy-rsa
+      when: not pki_dir.stat.exists
+
+    - name: Copy CSR from clients to autolab1
+      copy:
+        src: /tmp/{{ client_hostname }}.req
+        dest: /etc/easy-rsa/pki/reqs/
+      delegate_to: localhost
+
+    - name: Sign the CSR
+      command: "{{ easyrsa_path }} sign-req server {{ client_hostname }}"
+      args:
+        chdir: /etc/easy-rsa
+
+    - name: Fetch the signed certificate from autolab1
+      fetch:
+        src: /etc/easy-rsa/pki/issued/{{ client_hostname }}.crt
+        dest: /tmp/{{ client_hostname }}.crt
+        flat: yes
+      delegate_to: localhost
+
+    - name: Copy signed certificate back to client
+      copy:
+        src: /tmp/{{ client_hostname }}.crt
+        dest: /etc/easy-rsa/pki/issued/
+        remote_src: yes
+      delegate_to: localhost
+      when: inventory_hostname != "autolab1"

@@ -1,0 +1,7 @@
+---
+- name: Test host matching for autolab1
+  hosts: autolab1
+  tasks:
+    - name: Ensure autolab1 is matched
+      debug:
+        msg: "autolab1 is successfully matched."

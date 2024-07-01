@@ -1,0 +1,80 @@
+---
+- name: Sign CSR on CA server
+  hosts: autolab1
+  vars:
+    client_hostname: "webserver2"
+    easyrsa_path: "/usr/local/bin/easyrsa"
+  tasks:
+    - name: Debug client_hostname variable
+      debug:
+        var: client_hostname
+
+    - name: Create Easy-RSA directory
+      file:
+        path: /etc/easy-rsa
+        state: directory
+        mode: '0755'
+
+    - name: Check if PKI is already initialized
+      stat:
+        path: /etc/easy-rsa/pki
+      register: pki_dir
+
+    - name: Initialize PKI
+      command: "{{ easyrsa_path }} init-pki"
+      args:
+        chdir: /etc/easy-rsa
+      when: not pki_dir.stat.exists
+
+    - name: Build CA
+      command: "{{ easyrsa_path }} build-ca nopass"
+      args:
+        chdir: /etc/easy-rsa
+      when: not pki_dir.stat.exists
+
+    - name: Check for CSR file
+      stat:
+        path: /etc/easy-rsa/pki/reqs/{{ client_hostname }}.req
+      register: csr_file
+
+    - name: Debug CSR file
+      debug:
+        msg: "CSR file exists: {{ csr_file.stat.exists }}"
+
+    - name: Copy CSR from clients to autolab1
+      copy:
+        src: /tmp/{{ client_hostname }}.req
+        dest: /etc/easy-rsa/pki/reqs/
+      delegate_to: localhost
+
+    - name: Check for Easy-RSA directories
+      shell: ls -l /etc/easy-rsa/pki/
+      register: ls_output
+
+    - name: Debug Easy-RSA directories
+      debug:
+        var: ls_output.stdout_lines
+
+    - name: Sign the CSR
+      command: "{{ easyrsa_path }} sign-req server {{ client_hostname }}"
+      args:
+        chdir: /etc/easy-rsa
+      register: sign_output
+
+    - name: Debug sign output
+      debug:
+        var: sign_output
+
+    - name: Fetch the signed certificate from autolab1
+      fetch:
+        src: /etc/easy-rsa/pki/issued/{{ client_hostname }}.crt
+        dest: /tmp/{{ client_hostname }}.crt
+        flat: yes
+      delegate_to: localhost
+
+    - name: Copy signed certificate back to client
+      copy:
+        src: /tmp/{{ client_hostname }}.crt
+        dest: /etc/easy-rsa/pki/issued/
+        remote_src: yes
+      delegate_to: localhost
